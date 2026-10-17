@@ -1,0 +1,17 @@
+[Unit]
+Description=cPanel & Server Health Monitor Telegram Bot Daemon
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Projects/cpanel-monitor-bot
+ExecStart=%h/Projects/cpanel-monitor-bot/venv/bin/python %h/Projects/cpanel-monitor-bot/src/bot.py
+Restart=always
+RestartSec=10
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

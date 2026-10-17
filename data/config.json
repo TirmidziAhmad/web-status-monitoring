@@ -1,0 +1,9 @@
+{
+  "target_urls": [
+    "https://prima.rsmra.id",
+    "https://prima.rsmra.id:2083"
+  ],
+  "check_interval_seconds": 60,
+  "failure_threshold": 3,
+  "reminder_interval_minutes": 30
+}
