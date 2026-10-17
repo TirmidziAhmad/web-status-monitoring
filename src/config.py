@@ -87,11 +87,21 @@ class ConfigManager:
         return ids
 
     def _load_runtime_config(self) -> None:
-        """Load overrides from runtime config.json if present."""
+        """Load overrides from runtime config.json if present, or sync from .env if .env is newer."""
         if not self.runtime_config_file.exists():
             # Save initial defaults
             self._save_runtime_config()
             return
+
+        # If .env was edited more recently than config.json, let .env take precedence
+        if self.env_path.exists():
+            try:
+                if self.env_path.stat().st_mtime > self.runtime_config_file.stat().st_mtime:
+                    logger.info(".env is newer than config.json. Updating runtime config from .env.")
+                    self._save_runtime_config()
+                    return
+            except OSError:
+                pass
 
         try:
             with open(self.runtime_config_file, "r", encoding="utf-8") as f:
