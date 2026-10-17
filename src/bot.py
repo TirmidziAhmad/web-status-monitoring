@@ -120,6 +120,7 @@ class CPanelMonitorBot:
 
     async def cmd_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle /status command. Displays current health status of all targets."""
+        self.config.check_and_reload_if_modified()
         targets = self.config.get_targets()
         if not targets:
             await update.message.reply_text(
@@ -183,6 +184,7 @@ class CPanelMonitorBot:
 
     async def cmd_targets(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle /targets command. Lists all monitored targets and current settings."""
+        self.config.check_and_reload_if_modified()
         targets = self.config.get_targets()
         lines = [
             "📋 <b>DAFTAR TARGET PEMANTAUAN</b>\n",
@@ -352,6 +354,9 @@ class CPanelMonitorBot:
 
     async def run_monitor_cycle(self, bot) -> None:
         """Perform one monitoring cycle across all configured targets."""
+        # Auto-detect if user edited .env on disk and hot-reload settings
+        self.config.check_and_reload_if_modified()
+
         targets = self.config.get_targets()
         if not targets:
             return
@@ -419,10 +424,21 @@ class CPanelMonitorBot:
 
 
 def build_application(bot_instance: CPanelMonitorBot) -> Application:
-    """Build and configure the Telegram Application instance."""
+    """Build and configure the Telegram Application instance with robust connection settings."""
+    from telegram.request import HTTPXRequest
+
+    request = HTTPXRequest(
+        connect_timeout=20.0,
+        read_timeout=30.0,
+        write_timeout=30.0,
+        connection_pool_size=16,
+        http_version="1.1",
+    )
+
     app = (
         ApplicationBuilder()
         .token(bot_instance.config.bot_token)
+        .request(request)
         .post_init(bot_instance.on_post_init)
         .post_shutdown(bot_instance.on_shutdown)
         .build()

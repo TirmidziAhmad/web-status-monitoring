@@ -71,8 +71,46 @@ class ConfigManager:
         self.check_interval_seconds: int = self.default_interval
         self.failure_threshold: int = self.default_threshold
 
+        # Track .env modification time for automatic hot-reloading
+        self._last_env_mtime: float = self.env_path.stat().st_mtime if self.env_path.exists() else 0.0
+
         # Load persisted runtime config if exists
         self._load_runtime_config()
+
+    def check_and_reload_if_modified(self) -> bool:
+        """Automatically detect if .env file changed on disk and reload in-memory settings."""
+        if not self.env_path.exists():
+            return False
+        try:
+            current_mtime = self.env_path.stat().st_mtime
+            if current_mtime > self._last_env_mtime:
+                logger.info(".env modification detected. Hot-reloading configuration...")
+                self._last_env_mtime = current_mtime
+                load_dotenv(self.env_path, override=True)
+
+                self.bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+                raw_chat_id = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+                self.admin_chat_ids = self._parse_chat_ids(raw_chat_id)
+
+                raw_targets = os.getenv("TARGET_URLS", "https://rsmra.co.id").strip()
+                new_targets: list[str] = []
+                for item in raw_targets.split(","):
+                    cleaned = normalize_target_url(item)
+                    if cleaned and cleaned not in new_targets:
+                        new_targets.append(cleaned)
+                if new_targets:
+                    self.target_urls = new_targets
+
+                self.check_interval_seconds = int(os.getenv("CHECK_INTERVAL_SECONDS", str(self.check_interval_seconds)))
+                self.failure_threshold = int(os.getenv("FAILURE_THRESHOLD", str(self.failure_threshold)))
+                self.reminder_interval_minutes = int(os.getenv("REMINDER_INTERVAL_MINUTES", str(self.reminder_interval_minutes)))
+                self.request_timeout_seconds = float(os.getenv("REQUEST_TIMEOUT_SECONDS", str(self.request_timeout_seconds)))
+
+                self._save_runtime_config()
+                return True
+        except Exception as e:
+            logger.warning("Error during hot-reload check of .env: %s", e)
+        return False
 
     def _parse_chat_ids(self, raw_str: str) -> list[int]:
         ids: list[int] = []

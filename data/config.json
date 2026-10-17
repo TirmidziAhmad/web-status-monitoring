@@ -3,6 +3,6 @@
     "https://rsmra.co.id"
   ],
   "check_interval_seconds": 60,
-  "failure_threshold": 3,
+  "failure_threshold": 2,
   "reminder_interval_minutes": 30
 }
